@@ -1,0 +1,36 @@
+version: '3'
+services:
+  nodejs:
+    image: node:10.13.0
+    volumes:
+      - ./:/src
+      - nodemodules-volume:/src/node_modules
+    working_dir: /src
+    command: yarn serve
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=development
+    links:
+      - postgres
+  postgres:
+    image: postgres:10
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=P@ssw0rd
+      - POSTGRES_DB=database_development
+  postgres-volume:
+    image: busybox:1.29.3
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+  nodemodules-volume:
+    image: busybox:1.29.3
+    volumes:
+      - nodemodules-volume:/src/node_modules
+volumes:
+  postgres-volume:
+  nodemodules-volume:
