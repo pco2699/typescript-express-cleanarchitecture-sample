@@ -1,14 +1,15 @@
 import firebase from 'firebase';
 import { Service, Token } from 'typedi';
+import { InternalServerError } from 'routing-controllers';
 
-export interface FirebaseGateway {
-  register(email: string, password: string): Promise<firebase.auth.UserCredential>;
-  getCurrentUser(): (firebase.User | null);
+export interface AuthGateway {
+  register(email: string, password: string): void;
+  getUUID(): string;
 }
-export const FirebaseGatewayToken = new Token<FirebaseGateway>();
+export const AuthGatewayToken = new Token<AuthGateway>();
 
-@Service(FirebaseGatewayToken)
-class FirebaseGatewayImpl implements FirebaseGateway {
+@Service(AuthGatewayToken)
+class FirebaseGateway implements AuthGateway {
   firebase: firebase.app.App;
 
   constructor() {
@@ -22,12 +23,21 @@ class FirebaseGatewayImpl implements FirebaseGateway {
     });
   }
 
-  register(email: string, password: string): Promise<firebase.auth.UserCredential> {
-    return this.firebase.auth().createUserWithEmailAndPassword(email, password);
+  async register(email: string, password: string): Promise<void> {
+    await this.firebase.auth().createUserWithEmailAndPassword(email, password);
+    const user = this.firebase.auth().currentUser;
+    if (!user) {
+      throw new InternalServerError('failed to register user');
+    }
+    await user.sendEmailVerification(null);
   }
 
-  getCurrentUser(): (firebase.User | null) {
-    return this.firebase.auth().currentUser;
+  getUUID(): string {
+    const user = this.firebase.auth().currentUser;
+    if (!user) {
+      throw new InternalServerError('failed to fetch user');
+    }
+    return user.uid;
   }
 
 }
